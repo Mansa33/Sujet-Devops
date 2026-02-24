@@ -1,26 +1,29 @@
+version: '3.8'
+
 services:
-
-  # Conteneur 1 : Le site Web Althea
-
   web-server:
-
-    image: nginx:latest
-
+    build: ./web-custom
+    container_name: althea-web
     ports:
-
       - "80:80"
-
     restart: always
-
-
-  # Conteneur 2 : La base de données (données patients)
+    networks:
+      - althea-net
 
   db-patient:
-
     image: postgres:15
-
+    container_name: althea-db
     environment:
-
-      POSTGRES_PASSWORD: Administrateur123*
-
+      - POSTGRES_PASSWORD=Administrateur123*
     restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - althea-net
+
+networks:
+  althea-net:
+    driver: bridge
+
+volumes:
+  db-data:
