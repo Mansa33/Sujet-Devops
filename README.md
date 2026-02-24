@@ -1,5 +1,3 @@
-Ce dépôt contient l'infrastructure et la configuration logicielle pour la plateforme SaaS **Althea Systems**, spécialisée dans la gestion de données de santé.
-
 ## Architecture Déployée
 L'infrastructure est hébergée sur **Microsoft Azure** (Région : France Central) pour garantir la conformité HDS (Hébergement de Données de Santé).
 
