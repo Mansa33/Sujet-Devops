@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Service Web (Nginx)
+  # Service Web Front-End
   web-server:
     build: ./web-custom
     container_name: althea-web
@@ -9,11 +9,11 @@ services:
       - "80:80"
     restart: always
     networks:
-      - althea-net # Réseau isolé (Critère Orchestration)
+      - althea-net
     depends_on:
       - db-patient
 
-  # Service Base de données (PostgreSQL)
+  # Service Base de données
   db-patient:
     image: postgres:15
     container_name: althea-db
@@ -23,13 +23,15 @@ services:
       - POSTGRES_DB=${DB_NAME}
     restart: always
     volumes:
-      - db-data:/var/lib/postgresql/data # Persistance (Critère Persistance)
+      - db-data:/var/lib/postgresql/data
     networks:
       - althea-net
 
+# Configuration du réseau privé
 networks:
   althea-net:
-    driver: bridge # Réseau privé pour isoler la DB du web
+    driver: bridge
 
+# Configuration de la persistance des données
 volumes:
-  db-data: # Volume pour ne pas perdre les données patients
+  db-data:
