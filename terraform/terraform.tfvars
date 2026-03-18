@@ -1,0 +1,7 @@
+subscription_id     = "e3e22939-bbd3-4b19-b431-13b29032df18"
+tenant_id           = "75234489-685f-4bd1-8f8b-adc8102b6655"
+resource_group_name = "mygroupe"
+location            = "switzerlandnorth"
+vm_name             = "myVM"
+admin_username      = "azureadmin"
+ssh_public_key_path = "~/.ssh/id_rsa.pub"
