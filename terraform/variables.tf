@@ -32,4 +32,7 @@ variable "admin_username" {
   default     = "azureadmin"
 }
 
-public_key = var.ssh_public_key
+variable "ssh_public_key" {
+  description = "SSH public key content"
+  type        = string
+}
