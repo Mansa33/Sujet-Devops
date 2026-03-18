@@ -45,18 +45,6 @@ Tous les services sont conteneurisés via Docker Compose.
 - Accès root (`sudo`)
 - Connexion internet
 
-### Déploiement
-
-```bash
-git clone https://github.com/Mansa33/Sujet-Devops.git
-cd Sujet-Devops
-sudo bash install.sh
-```
-
-Le script `install.sh` installe automatiquement Docker si absent, puis démarre les deux stacks Docker Compose. Une fois terminé, les 7 conteneurs sont opérationnels.
-
----
-
 ## Configuration
 
 ### Variables d'environnement (`app/.env`)
