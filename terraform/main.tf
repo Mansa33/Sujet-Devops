@@ -1,3 +1,7 @@
+# ============================================================
+# Configuration du provider Terraform pour Azure
+# Utilise le provider azurerm version 4.x
+# ============================================================
 terraform {
   required_providers {
     azurerm = {
@@ -7,17 +11,26 @@ terraform {
   }
 }
 
+# Authentification Azure via les variables (subscription_id)
+# resource_provider_registrations = "none" evite les erreurs de permissions
 provider "azurerm" {
   features {}
   subscription_id                 = var.subscription_id
   resource_provider_registrations = "none"
 }
 
+# ============================================================
+# Groupe de ressources — conteneur logique de toutes les ressources
+# ============================================================
 resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
   location = var.location
 }
 
+# ============================================================
+# Reseau virtuel (VNET) — isolation reseau de la VM
+# Plage d'adresses : 10.1.0.0/16
+# ============================================================
 resource "azurerm_virtual_network" "vnet" {
   name                = "${var.vm_name}-vnet"
   address_space       = ["10.1.0.0/16"]
@@ -25,6 +38,8 @@ resource "azurerm_virtual_network" "vnet" {
   resource_group_name = azurerm_resource_group.rg.name
 }
 
+# Sous-reseau par defaut dans le VNET
+# Plage : 10.1.0.0/24 (256 adresses disponibles)
 resource "azurerm_subnet" "subnet" {
   name                 = "default"
   resource_group_name  = azurerm_resource_group.rg.name
@@ -32,11 +47,16 @@ resource "azurerm_subnet" "subnet" {
   address_prefixes     = ["10.1.0.0/24"]
 }
 
+# ============================================================
+# Network Security Group — pare-feu avec regles de trafic entrant
+# Chaque regle definit un port autorise depuis Internet
+# ============================================================
 resource "azurerm_network_security_group" "nsg" {
   name                = "${var.vm_name}-nsg"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
+  # Acces SSH pour l'administration de la VM
   security_rule {
     name                       = "SSH"
     priority                   = 1001
@@ -49,6 +69,7 @@ resource "azurerm_network_security_group" "nsg" {
     destination_address_prefix = "*"
   }
 
+  # Acces HTTP pour l'application web Nginx
   security_rule {
     name                       = "HTTP"
     priority                   = 1002
@@ -61,6 +82,7 @@ resource "azurerm_network_security_group" "nsg" {
     destination_address_prefix = "*"
   }
 
+  # Acces Grafana pour les dashboards de monitoring
   security_rule {
     name                       = "Grafana"
     priority                   = 1003
@@ -73,6 +95,7 @@ resource "azurerm_network_security_group" "nsg" {
     destination_address_prefix = "*"
   }
 
+  # Acces Prometheus pour les metriques
   security_rule {
     name                       = "Prometheus"
     priority                   = 1004
@@ -86,6 +109,10 @@ resource "azurerm_network_security_group" "nsg" {
   }
 }
 
+# ============================================================
+# IP publique statique — adresse fixe accessible depuis Internet
+# SKU Standard requis pour les zones de disponibilite
+# ============================================================
 resource "azurerm_public_ip" "pip" {
   name                = "${var.vm_name}-ip"
   location            = azurerm_resource_group.rg.location
@@ -95,6 +122,9 @@ resource "azurerm_public_ip" "pip" {
   zones               = ["1"]
 }
 
+# ============================================================
+# Interface reseau — connecte la VM au sous-reseau et a l'IP publique
+# ============================================================
 resource "azurerm_network_interface" "nic" {
   name                = "${var.vm_name}-nic"
   location            = azurerm_resource_group.rg.location
@@ -108,11 +138,17 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
+# Association du NSG a l'interface reseau
 resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
   network_interface_id      = azurerm_network_interface.nic.id
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
+# ============================================================
+# Machine Virtuelle Linux — Ubuntu 22.04 LTS
+# Taille : Standard_B2als_v2 (2 vCPU, 4 Go RAM)
+# Le cloud-init installe automatiquement Docker et tous les services
+# ============================================================
 resource "azurerm_linux_virtual_machine" "vm" {
   name                            = var.vm_name
   resource_group_name             = azurerm_resource_group.rg.name
@@ -123,11 +159,15 @@ resource "azurerm_linux_virtual_machine" "vm" {
   disable_password_authentication = false
   zone                            = "1"
 
+  # Script cloud-init encode en base64 — s'execute au premier demarrage
+  # Installe Docker, clone le repo, demarre tous les services
   custom_data = base64encode(file("${path.module}/cloud-init.sh"))
+
   network_interface_ids = [
     azurerm_network_interface.nic.id,
   ]
 
+  # Cle SSH pour acces securise sans mot de passe
   admin_ssh_key {
     username   = var.admin_username
     public_key = var.ssh_public_key
@@ -138,6 +178,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
     storage_account_type = "Standard_LRS"
   }
 
+  # Image Ubuntu 22.04 LTS officielle de Canonical
   source_image_reference {
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-jammy"
