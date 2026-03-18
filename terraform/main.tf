@@ -76,6 +76,18 @@ resource "azurerm_network_security_group" "nsg" {
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
+
+  security_rule {
+    name                       = "Prometheus"
+    priority                   = 1004
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "9090"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
 }
 
 # Public IP
@@ -110,14 +122,46 @@ resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
 
 # Virtual Machine
 resource "azurerm_linux_virtual_machine" "vm" {
-  name                = var.vm_name
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  size                = "Standard_B2als_v2"
-  admin_username      = var.admin_username
-  admin_password      = var.admin_password
+  name                            = var.vm_name
+  resource_group_name             = azurerm_resource_group.rg.name
+  location                        = azurerm_resource_group.rg.location
+  size                            = "Standard_B2als_v2"
+  admin_username                  = var.admin_username
+  admin_password                  = var.admin_password
   disable_password_authentication = false
-  zone                = "1"
+  zone                            = "1"
+
+  custom_data = base64encode(<<-EOF
+    #!/bin/bash
+    apt-get update -y
+    apt-get install -y ca-certificates curl gnupg git
+
+    # Install Docker
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list
+    apt-get update -y
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+    # Add user to docker group
+    usermod -aG docker azureadmin
+
+    # Clone repo
+    cd /home/azureadmin
+    git clone https://github.com/Mansa33/Sujet-Devops.git
+    chown -R azureadmin:azureadmin Sujet-Devops
+
+    # Start monitoring stack
+    cd /home/azureadmin/Sujet-Devops
+    docker compose -f docker-compose-monitoring.yml up -d
+
+    # Start app
+    docker compose -f app/docker-compose.yml up -d --build
+
+    echo "Setup complete" > /home/azureadmin/setup.log
+  EOF
+  )
 
   network_interface_ids = [
     azurerm_network_interface.nic.id,
