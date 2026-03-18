@@ -153,7 +153,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
     chown -R azureadmin:azureadmin Sujet-Devops
 
     # Wait for Docker to be ready
-    sleep 10
+    sleep 45
 
     # Start monitoring stack first
     cd /home/azureadmin/Sujet-Devops
