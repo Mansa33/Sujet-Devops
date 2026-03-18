@@ -163,14 +163,24 @@ Sujet-Devops/
 ```
 
 ---
+## Automatisation CI/CD (GitHub Actions)
 
+Un pipeline d'intégration et de déploiement continu (CI/CD) est configuré via GitHub Actions (`.github/workflows/ci-cd.yml`) pour automatiser les mises en production tout en respectant les normes de sécurité de l'infrastructure (contexte HDS).
+
+### Fonctionnement du Pipeline
+
+1. **Déclenchement** : Le pipeline s'exécute automatiquement à chaque `push` sur la branche `main`.
+2. **Build & Push (ACR)** : 
+   - L'image Docker front-end (`althea-web`) est construite et doublement taguée (tag `latest` et tag avec le SHA du commit pour une traçabilité parfaite).
+   - Elle est ensuite poussée vers notre registre privé **Azure Container Registry (ACR)**.
+3. **Déploiement (SSH)** :
+   - Une fois l'image stockée, le pipeline se connecte à la VM Azure via SSH.
+   - Le code source est mis à jour (`git pull`) et les conteneurs applicatifs sont recréés dynamiquement via Docker Compose.
+
+### Sécurité du déploiement
+- **Gestion des secrets** : Aucune donnée sensible n'est hardcodée. Les identifiants du registre ACR et les clés SSH de la VM sont stockés de manière chiffrée dans les **GitHub Secrets**.
+- **Registre Privé** : L'utilisation d'ACR garantit que nos images Docker (contenant potentiellement des configurations liées au domaine de la santé) ne sont pas exposées publiquement sur le Docker Hub.
 ## Arret des services
-
-```bash
-bash stop.sh
-```
-
----
 
 ## Technologies utilisees
 
