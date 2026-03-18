@@ -170,6 +170,71 @@ Un pipeline d'intégration et de déploiement continu (CI/CD) est configuré via
 - **Registre Privé** : L'utilisation d'ACR garantit que nos images Docker (contenant potentiellement des configurations liées au domaine de la santé) ne sont pas exposées publiquement sur le Docker Hub.
 ## Arret des services
 
+## Architecture
+```
+Internet
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│          Azure NSG (Pare-feu)           │
+│  Ports ouverts: 22, 80, 3000, 9090,    │
+│                 9100, 3100              │
+└─────────────────┬───────────────────────┘
+                  │
+    ┌─────────────▼─────────────┐
+    │   VM Ubuntu 24.04 LTS     │
+    │   IP: 74.242.170.50       │
+    │                           │
+    │  ┌─────────────────────┐  │
+    │  │   Docker Network    │  │
+    │  │   app_althea-net    │  │
+    │  │                     │  │
+    │  │  ┌──────────────┐   │  │
+    │  │  │  althea-web  │   │  │
+    │  │  │  Nginx:80    │   │  │
+    │  │  └──────┬───────┘   │  │
+    │  │         │           │  │
+    │  │  ┌──────▼───────┐   │  │
+    │  │  │  althea-db   │   │  │
+    │  │  │ PostgreSQL   │   │  │
+    │  │  └──────────────┘   │  │
+    │  │                     │  │
+    │  │  ┌──────────────┐   │  │
+    │  │  │  prometheus  │   │  │
+    │  │  │  grafana     │   │  │
+    │  │  │  loki        │   │  │
+    │  │  │  promtail    │   │  │
+    │  │  │  node-export │   │  │
+    │  │  └──────────────┘   │  │
+    │  └─────────────────────┘  │
+    └───────────────────────────┘
+```
+
+## Dépannage
+
+### Les containers ne démarrent pas
+```bash
+sudo docker compose -f app/docker-compose.yml logs
+sudo docker compose -f docker-compose-monitoring.yml logs
+```
+
+### Grafana inaccessible
+Vérifier que le port 3000 est ouvert dans le NSG Azure et que le container tourne :
+```bash
+docker ps | grep grafana
+```
+
+### Le pipeline CI/CD échoue
+Vérifier que les 6 secrets GitHub sont bien configurés dans Settings > Secrets and variables > Actions.
+
+### Terraform apply échoue
+```bash
+cd terraform
+terraform init
+az login
+terraform plan
+```
+
 ## Technologies utilisees
 
 Docker — Docker Compose — Nginx — PostgreSQL — Prometheus — Grafana — Loki — Promtail — Node Exporter — Microsoft Azure — Ubuntu 24.04 LTS
