@@ -49,6 +49,6 @@ jobs:
             cd ~/Sujet-Devops
             git fetch origin main
             git reset --hard origin/main
-            sudo docker compose -f app/docker-compose.yml down
-            sudo docker compose -f app/docker-compose.yml up -d --build
+            docker compose -f app/docker-compose.yml down
+            docker compose -f app/docker-compose.yml up -d --build
             echo "Deployment successful"
