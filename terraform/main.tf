@@ -152,9 +152,15 @@ resource "azurerm_linux_virtual_machine" "vm" {
     git clone https://github.com/Mansa33/Sujet-Devops.git
     chown -R azureadmin:azureadmin Sujet-Devops
 
-    # Start monitoring stack
+    # Wait for Docker to be ready
+    sleep 10
+
+    # Start monitoring stack first
     cd /home/azureadmin/Sujet-Devops
     docker compose -f docker-compose-monitoring.yml up -d
+
+    # Wait for monitoring to be ready
+    sleep 5
 
     # Start app
     docker compose -f app/docker-compose.yml up -d --build
