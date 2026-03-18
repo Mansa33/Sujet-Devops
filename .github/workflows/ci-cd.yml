@@ -3,7 +3,7 @@ name: CI/CD Pipeline - Althea DevOps
 on:
   push:
     branches:
-      - main
+      - main # Déclenchement automatique uniquement lors d'un push/merge sur la branche de production
 
 jobs:
   build-and-push:
@@ -14,6 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Authentification au registre de conteneurs Azure (ACR) de manière sécurisée via les GitHub Secrets
       - name: Login to Azure Container Registry
         uses: docker/login-action@v2
         with:
@@ -21,6 +22,7 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      # Construction de l'image Nginx personnalisée avec deux tags : le SHA unique du commit (traçabilité) et 'latest'
       - name: Build Docker image
         run: |
           docker build \
@@ -28,6 +30,7 @@ jobs:
             -t ${{ secrets.ACR_LOGIN_SERVER }}/althea-web:latest \
             ./app/web-custom
 
+      # Envoi des deux tags vers le registre privé Azure
       - name: Push Docker image to ACR
         run: |
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/althea-web:${{ github.sha }}
@@ -36,9 +39,10 @@ jobs:
   deploy:
     name: Deploy to Azure VM
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: build-and-push # Garantit que le déploiement ne s'exécute que si l'étape de build a réussi
 
     steps:
+      # Connexion à la VM Azure via SSH et mise à jour des conteneurs
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -49,6 +53,7 @@ jobs:
             cd ~/Sujet-Devops
             git fetch origin main
             git reset --hard origin/main
+            # Recréation des conteneurs avec les images nouvellement poussées
             docker compose -f app/docker-compose.yml down
             docker compose -f app/docker-compose.yml up -d --build
             echo "Deployment successful"
