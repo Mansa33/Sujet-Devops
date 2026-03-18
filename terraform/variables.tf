@@ -26,10 +26,10 @@ variable "vm_name" {
   default     = "myVM"
 }
 
-variable "admin_username" {
-  description = "Admin username for the VM"
+variable "admin_password" {
+  description = "Admin password for the VM"
   type        = string
-  default     = "azureadmin"
+  sensitive   = true
 }
 
 variable "ssh_public_key" {
