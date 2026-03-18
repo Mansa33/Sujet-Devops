@@ -1,6 +1,6 @@
 # Althea DevOps — Infrastructure de Monitoring
 
-Projet DevOps déployé sur Microsoft Azure (France Central) dans le cadre d'un hébergement conforme HDS (Hébergement de Données de Santé).
+Projet DevOps déployé sur Microsoft Azure (Switzerland North) dans le cadre d'un hébergement conforme HDS (Hébergement de Données de Santé).
 
 ---
 
@@ -8,7 +8,7 @@ Projet DevOps déployé sur Microsoft Azure (France Central) dans le cadre d'un 
 
 ### Infrastructure Cloud
 
-- **Provider** : Microsoft Azure — Région France Central
+- **Provider** : Microsoft Azure — Région Switzerland North
 - **IP Publique** : `74.242.170.50`
 - **VM** : Ubuntu 24.04 LTS (Standard_B2as_v2 — 2 vCPU, 8 Go RAM)
 - **Réseau** : Virtual Network (VNET) avec Network Security Group (NSG)
