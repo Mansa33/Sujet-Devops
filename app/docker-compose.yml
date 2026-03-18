@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Service Web Front-End
+  # Service Web Front-End — Nginx avec image Alpine securisee
   web-server:
     build: ./web-custom
     container_name: althea-web
@@ -13,7 +13,7 @@ services:
     depends_on:
       - db-patient
 
-  # Service Base de données
+  # Service Base de donnees — PostgreSQL 15 avec donnees persistantes
   db-patient:
     image: postgres:15
     container_name: althea-db
@@ -27,11 +27,11 @@ services:
     networks:
       - althea-net
 
-# Configuration du réseau privé
+# Reseau prive isole pour la communication entre web et base de donnees
 networks:
   althea-net:
     driver: bridge
 
-# Configuration de la persistance des données
+# Volume persistant pour les donnees PostgreSQL
 volumes:
   db-data:
