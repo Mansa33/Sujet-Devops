@@ -159,8 +159,6 @@ Sujet-Devops/
 ├── docker-compose-monitoring.yml # Stack monitoring
 ├── prometheus.yml                # Configuration scraping Prometheus
 ├── promtail-config.yml           # Configuration collecte logs Loki
-├── install.sh                    # Script d'installation automatique
-├── stop.sh                       # Script d'arret des services
 └── README.md
 ```
 
