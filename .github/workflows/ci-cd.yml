@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   build-and-push:
@@ -40,7 +37,6 @@ jobs:
     name: Deploy to Azure VM
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Deploy via SSH
@@ -51,10 +47,7 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             cd ~/Sujet-Devops
-            git pull origin main
-            docker login ${{ secrets.ACR_LOGIN_SERVER }} \
-              -u ${{ secrets.ACR_USERNAME }} \
-              -p ${{ secrets.ACR_PASSWORD }}
-            docker pull ${{ secrets.ACR_LOGIN_SERVER }}/althea-web:latest
-            docker compose -f app/docker-compose.yml up -d --build
+            git fetch origin main
+            git reset --hard origin/main
+            sudo docker compose -f app/docker-compose.yml up -d --build --force-recreate
             echo "Deployment successful"
