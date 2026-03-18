@@ -1,92 +1,179 @@
-🏥 Althea DevOps — Infrastructure de Monitoring
+# Althea DevOps — Infrastructure de Monitoring
+
 Projet DevOps déployé sur Microsoft Azure (France Central) dans le cadre d'un hébergement conforme HDS (Hébergement de Données de Santé).
 
-🏗️ Architecture
-Infrastructure Cloud
+---
 
-Provider : Microsoft Azure — Région France Central
-VM : Ubuntu 24.04 LTS (Standard_B2as_v2 — 2 vCPU, 8 Go RAM)
-Réseau : Virtual Network (VNET) avec Network Security Group (NSG)
-Accès : SSH via clés asymétriques RSA
+## Architecture
 
-Stack Applicative (Docker)
+### Infrastructure Cloud
+
+- **Provider** : Microsoft Azure — Région France Central
+- **IP Publique** : `74.242.170.50`
+- **VM** : Ubuntu 24.04 LTS (Standard_B2as_v2 — 2 vCPU, 8 Go RAM)
+- **Réseau** : Virtual Network (VNET) avec Network Security Group (NSG)
+- **Accès** : SSH via clés asymétriques RSA
+
+### Stack Applicative (Docker)
+
 Tous les services sont conteneurisés via Docker Compose.
-🌐 Application (app/docker-compose.yml)
-ServiceImagePortDescriptionalthea-webnginx:alpine (custom)80Serveur web frontendalthea-dbpostgres:155432Base de données patients
-📊 Monitoring (docker-compose-monitoring.yml)
-ServiceImagePortDescriptionprometheusprom/prometheus9090Collecte des métriquesnode-exporterprom/node-exporter9100Métriques système Linuxgrafanagrafana/grafana3000Visualisation & dashboardslokigrafana/loki3100Agrégation des logspromtailgrafana/promtail—Agent de collecte des logs
 
-🚀 Installation
-Prérequis
+#### Application (`app/docker-compose.yml`)
 
-Ubuntu 24.04 LTS
-Accès root (sudo)
-Connexion internet
+| Service | Image | Port | Description |
+|---|---|---|---|
+| `althea-web` | `nginx:alpine` (custom) | 80 | Serveur web frontend |
+| `althea-db` | `postgres:15` | 5432 | Base de données patients |
 
-Déploiement en une commande
-bashgit clone https://github.com/Mansa33/Sujet-Devops.git
+#### Monitoring (`docker-compose-monitoring.yml`)
+
+| Service | Image | Port | Description |
+|---|---|---|---|
+| `prometheus` | `prom/prometheus` | 9090 | Collecte des métriques |
+| `node-exporter` | `prom/node-exporter` | 9100 | Métriques système Linux |
+| `grafana` | `grafana/grafana` | 3000 | Visualisation & dashboards |
+| `loki` | `grafana/loki` | 3100 | Agrégation des logs |
+| `promtail` | `grafana/promtail` | — | Agent de collecte des logs |
+
+---
+
+## Installation
+
+### Prérequis
+
+- Ubuntu 24.04 LTS
+- Accès root (`sudo`)
+- Connexion internet
+
+### Déploiement
+
+```bash
+git clone https://github.com/Mansa33/Sujet-Devops.git
 cd Sujet-Devops
-cp /path/to/install.sh .
 sudo bash install.sh
-Le script install.sh installe automatiquement Docker si absent, puis démarre les deux stacks.
+```
 
-🔐 Configuration
-Variables d'environnement (app/.env)
-envPOSTGRES_PASSWORD=Administrateur123*
+Le script `install.sh` installe automatiquement Docker si absent, puis démarre les deux stacks Docker Compose. Une fois terminé, les 7 conteneurs sont opérationnels.
+
+---
+
+## Configuration
+
+### Variables d'environnement (`app/.env`)
+
+```env
+POSTGRES_PASSWORD=Administrateur123*
 POSTGRES_USER=althea_admin
 DB_NAME=patient_db
-Ports ouverts (NSG Azure)
-RèglePortProtocoleSSH22TCPHTTP80TCPHTTPS443TCPGrafana3000TCPPrometheus9090TCPNode Exporter9100TCPLoki3100TCP
+```
 
-📡 Accès aux services
-ServiceURL🌐 Application Webhttp://<IP>:80📊 Grafanahttp://<IP>:3000🔥 Prometheushttp://<IP>:9090📋 Loki (API)http://<IP>:3100/ready🖥️ Node Exporterhttp://<IP>:9100
+### Ouverture des ports — Network Security Group Azure
 
-Grafana — identifiants par défaut : admin / admin
+Les règles de sécurité réseau ont été configurées manuellement dans le NSG `myVM-nsg` via le portail Azure (Portail Azure > myVM-nsg > Inbound security rules > Add).
 
+| Nom de la règle | Priorité | Port | Protocole | Source | Action |
+|---|---|---|---|---|---|
+| SSH | 300 | 22 | TCP | Any | Allow |
+| HTTP | 340 | 80 | TCP | Any | Allow |
+| HTTPS | 320 | 443 | TCP | Any | Allow |
+| Grafana | 350 | 3000 | TCP | Any | Allow |
+| Prometheus | 360 | 9090 | TCP | Any | Allow |
+| Monitoring | 370 | 9100, 3100 | TCP | Any | Allow |
 
-📈 Dashboards Grafana
-Node Exporter Full (ID: 1860)
-Dashboard complet pour le monitoring système Linux :
+Pour ajouter une règle dans le portail Azure :
+1. Aller dans **myVM-nsg** > **Inbound security rules** > **+ Add**
+2. Renseigner le port de destination, protocole TCP, action Allow
+3. Attribuer une priorité unique (nombre plus bas = priorité plus haute)
+4. Sauvegarder
 
-CPU (usage, charge, fréquence)
-RAM (utilisée, cache, swap)
-Réseau (trafic par interface)
-Disque (I/O, espace utilisé)
-Processus & Systemd
+---
 
-Prometheus Stats
-Métriques internes de Prometheus avec panel Loki intégré pour la visualisation des logs système en temps réel.
-Configuration Loki dans Grafana
+## Accès aux services
 
-Connections → Data sources → Add data source → Loki
-URL : http://loki:3100
-Save & Test
+| Service | URL complète |
+|---|---|
+| Application Web | http://74.242.170.50 |
+| Grafana | http://74.242.170.50:3000 |
+| Prometheus | http://74.242.170.50:9090 |
+| Loki (API health) | http://74.242.170.50:3100/ready |
+| Node Exporter | http://74.242.170.50:9100 |
 
+Grafana — identifiants par défaut : `admin` / `admin`
 
-🔒 Sécurité
+---
 
-Image Nginx construite sur Alpine Linux (< 100 Mo)
-Exécution Nginx en utilisateur non-root (altheauser)
-Healthcheck Docker sur le conteneur web
-Accès SSH uniquement par clés asymétriques
-Isolation réseau via bridge Docker dédié (althea-net)
+## Dashboards Grafana
 
+### Node Exporter Full (ID: 1860)
 
-📁 Structure du projet
+Dashboard complet pour le monitoring système Linux importé depuis grafana.com.
+Il affiche en temps réel :
+
+- CPU (usage par mode, charge système, fréquence de scaling)
+- RAM (utilisée, cache, swap, buffers)
+- Réseau (trafic par interface, erreurs, drops)
+- Disque (I/O, throughput, espace utilisé par partition)
+- Processus, Systemd, entropie
+
+Pour l'importer : **Dashboards > Import > ID 1860 > Load > sélectionner Prometheus > Import**
+
+### Prometheus Stats
+
+Dashboard des métriques internes de Prometheus avec un panel Loki ajouté manuellement pour visualiser les logs système en temps réel.
+
+### Configuration des datasources dans Grafana
+
+**Prometheus :**
+1. Connections > Data sources > Add data source > Prometheus
+2. URL : `http://prometheus:9090`
+3. Save & Test
+
+**Loki :**
+1. Connections > Data sources > Add data source > Loki
+2. URL : `http://loki:3100`
+3. Save & Test
+
+---
+
+## Securite
+
+- Image Nginx construite sur Alpine Linux (taille inferieure a 100 Mo)
+- Execution Nginx en utilisateur non-root (`altheauser`)
+- Healthcheck Docker configure sur le conteneur web (intervalle 30s, timeout 3s)
+- Acces SSH uniquement par cles asymetriques RSA
+- Isolation reseau via bridge Docker dedie (`althea-net`)
+- Aucun port de base de donnees expose publiquement (PostgreSQL accessible uniquement en interne)
+
+---
+
+## Structure du projet
+
+```
 Sujet-Devops/
 ├── app/
 │   ├── docker-compose.yml        # Stack applicative
 │   ├── .env                      # Variables d'environnement
 │   └── web-custom/
-│       ├── Dockerfile            # Image Nginx sécurisée
+│       ├── Dockerfile            # Image Nginx securisee
 │       └── index.html            # Page web Althea
 ├── docker-compose-monitoring.yml # Stack monitoring
-├── prometheus.yml                # Config scraping Prometheus
-├── promtail-config.yml           # Config collecte logs Loki
+├── prometheus.yml                # Configuration scraping Prometheus
+├── promtail-config.yml           # Configuration collecte logs Loki
+├── install.sh                    # Script d'installation automatique
+├── stop.sh                       # Script d'arret des services
 └── README.md
+```
 
-🛑 Arrêt des services
-bashbash stop.sh
+---
 
-🧰 Technologies utilisées
-Docker Docker Compose Nginx PostgreSQL Prometheus Grafana Loki Promtail Node Exporter Azure Ubuntu 24.04
+## Arret des services
+
+```bash
+bash stop.sh
+```
+
+---
+
+## Technologies utilisees
+
+Docker — Docker Compose — Nginx — PostgreSQL — Prometheus — Grafana — Loki — Promtail — Node Exporter — Microsoft Azure — Ubuntu 24.04 LTS
