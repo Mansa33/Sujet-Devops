@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Prometheus — collecte les metriques de tous les services
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -8,17 +9,21 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+    restart: always
     networks:
       - app_althea-net
 
+  # Node Exporter — expose les metriques systeme de la VM (CPU, RAM, disque)
   node-exporter:
     image: prom/node-exporter
     container_name: node-exporter
     ports:
       - "9100:9100"
+    restart: always
     networks:
       - app_althea-net
 
+  # Grafana — visualisation des metriques et logs via dashboards
   grafana:
     image: grafana/grafana
     container_name: grafana
@@ -26,18 +31,22 @@ services:
       - "3000:3000"
     volumes:
       - grafana-data:/var/lib/grafana
+    restart: always
     networks:
       - app_althea-net
 
+  # Loki — agregation et stockage centralisé des logs
   loki:
     image: grafana/loki
     container_name: loki
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    restart: always
     networks:
       - app_althea-net
 
+  # Promtail — agent qui collecte les logs systeme et les envoie a Loki
   promtail:
     image: grafana/promtail
     container_name: promtail
@@ -45,13 +54,16 @@ services:
       - /var/log:/var/log
       - ./promtail-config.yml:/etc/promtail/config.yml
     command: -config.file=/etc/promtail/config.yml
+    restart: always
     networks:
       - app_althea-net
 
 volumes:
+  # Volume persistant pour les dashboards et datasources Grafana
   grafana-data:
 
-# Déclaration du réseau de l'application pour la communication inter-stack
+# Reseau externe cree par le stack app (docker-compose.yml)
+# Le monitoring rejoint ce reseau pour acceder aux metriques des containers
 networks:
   app_althea-net:
     external: true
