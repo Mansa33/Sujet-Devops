@@ -13,13 +13,11 @@ provider "azurerm" {
   resource_provider_registrations = "none"
 }
 
-# Resource Group
 resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
   location = var.location
 }
 
-# Virtual Network
 resource "azurerm_virtual_network" "vnet" {
   name                = "${var.vm_name}-vnet"
   address_space       = ["10.1.0.0/16"]
@@ -27,7 +25,6 @@ resource "azurerm_virtual_network" "vnet" {
   resource_group_name = azurerm_resource_group.rg.name
 }
 
-# Subnet
 resource "azurerm_subnet" "subnet" {
   name                 = "default"
   resource_group_name  = azurerm_resource_group.rg.name
@@ -35,7 +32,6 @@ resource "azurerm_subnet" "subnet" {
   address_prefixes     = ["10.1.0.0/24"]
 }
 
-# Network Security Group
 resource "azurerm_network_security_group" "nsg" {
   name                = "${var.vm_name}-nsg"
   location            = azurerm_resource_group.rg.location
@@ -90,7 +86,6 @@ resource "azurerm_network_security_group" "nsg" {
   }
 }
 
-# Public IP
 resource "azurerm_public_ip" "pip" {
   name                = "${var.vm_name}-ip"
   location            = azurerm_resource_group.rg.location
@@ -100,7 +95,6 @@ resource "azurerm_public_ip" "pip" {
   zones               = ["1"]
 }
 
-# Network Interface
 resource "azurerm_network_interface" "nic" {
   name                = "${var.vm_name}-nic"
   location            = azurerm_resource_group.rg.location
@@ -114,13 +108,11 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-# Associate NSG to NIC
 resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
   network_interface_id      = azurerm_network_interface.nic.id
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
-# Virtual Machine
 resource "azurerm_linux_virtual_machine" "vm" {
   name                            = var.vm_name
   resource_group_name             = azurerm_resource_group.rg.name
@@ -131,60 +123,55 @@ resource "azurerm_linux_virtual_machine" "vm" {
   disable_password_authentication = false
   zone                            = "1"
 
- custom_data = base64encode(<<-EOF
-    #!/bin/bash
-    apt-get update -y
-    apt-get install -y ca-certificates curl gnupg git
+  custom_data = base64encode(<<-EOF
+#!/bin/bash
+apt-get update -y
+apt-get install -y ca-certificates curl gnupg git
 
-    # Install Docker
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list
-    apt-get update -y
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-    # Add user to docker group
-    usermod -aG docker azureadmin
+usermod -aG docker azureadmin
 
-    # Clone repo
-    cd /home/azureadmin
-    git clone https://github.com/Mansa33/Sujet-Devops.git
-    chown -R azureadmin:azureadmin Sujet-Devops
+cd /home/azureadmin
+git clone https://github.com/Mansa33/Sujet-Devops.git
+chown -R azureadmin:azureadmin Sujet-Devops
 
-    # Create startup script
-    cat > /home/azureadmin/start-services.sh << 'SCRIPT'
-    #!/bin/bash
-    cd /home/azureadmin/Sujet-Devops
-    docker compose -f docker-compose-monitoring.yml up -d
-    sleep 10
-    docker compose -f app/docker-compose.yml up -d --build
-    echo "Setup complete" > /home/azureadmin/setup.log
-    SCRIPT
-    chmod +x /home/azureadmin/start-services.sh
+cat > /home/azureadmin/start-services.sh << 'SCRIPT'
+#!/bin/bash
+cd /home/azureadmin/Sujet-Devops
+docker compose -f docker-compose-monitoring.yml up -d
+sleep 10
+docker compose -f app/docker-compose.yml up -d --build
+echo "Setup complete" > /home/azureadmin/setup.log
+SCRIPT
+chmod +x /home/azureadmin/start-services.sh
 
-    # Create systemd service
-    cat > /etc/systemd/system/althea-start.service << 'SERVICE'
-    [Unit]
-    Description=Start Althea Services
-    After=docker.service network-online.target
-    Wants=docker.service
+cat > /etc/systemd/system/althea-start.service << 'SERVICE'
+[Unit]
+Description=Start Althea Services
+After=docker.service network-online.target
+Wants=docker.service
 
-    [Service]
-    Type=oneshot
-    ExecStart=/home/azureadmin/start-services.sh
-    RemainAfterExit=yes
-    User=root
+[Service]
+Type=oneshot
+ExecStart=/home/azureadmin/start-services.sh
+RemainAfterExit=yes
+TimeoutStartSec=300
+User=root
 
-    [Install]
-    WantedBy=multi-user.target
-    SERVICE
+[Install]
+WantedBy=multi-user.target
+SERVICE
 
-    systemctl daemon-reload
-    systemctl enable althea-start.service
-
-    echo "Cloud-init done" > /home/azureadmin/cloudinit.log
-  EOF
+systemctl daemon-reload
+systemctl enable althea-start.service
+echo "Cloud-init done" > /home/azureadmin/cloudinit.log
+EOF
   )
 
   network_interface_ids = [
