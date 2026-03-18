@@ -131,7 +131,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   disable_password_authentication = false
   zone                            = "1"
 
-  custom_data = base64encode(<<-EOF
+ custom_data = base64encode(<<-EOF
     #!/bin/bash
     apt-get update -y
     apt-get install -y ca-certificates curl gnupg git
@@ -152,15 +152,15 @@ resource "azurerm_linux_virtual_machine" "vm" {
     git clone https://github.com/Mansa33/Sujet-Devops.git
     chown -R azureadmin:azureadmin Sujet-Devops
 
-    # Wait for Docker to be ready
-    sleep 45
+    # Wait for Docker daemon to be fully ready
+    sleep 30
+    systemctl restart docker
+    sleep 10
 
-    # Start monitoring stack first
+    # Start monitoring stack as root (cloud-init runs as root)
     cd /home/azureadmin/Sujet-Devops
     docker compose -f docker-compose-monitoring.yml up -d
-
-    # Wait for monitoring to be ready
-    sleep 5
+    sleep 10
 
     # Start app
     docker compose -f app/docker-compose.yml up -d --build
