@@ -123,57 +123,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   disable_password_authentication = false
   zone                            = "1"
 
-  custom_data = base64encode(<<-EOF
-#!/bin/bash
-apt-get update -y
-apt-get install -y ca-certificates curl gnupg git
-
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-chmod a+r /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list
-apt-get update -y
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-
-usermod -aG docker azureadmin
-
-cd /home/azureadmin
-git clone https://github.com/Mansa33/Sujet-Devops.git
-chown -R azureadmin:azureadmin Sujet-Devops
-
-cat > /home/azureadmin/start-services.sh << 'SCRIPT'
-#!/bin/bash
-cd /home/azureadmin/Sujet-Devops
-docker compose -f docker-compose-monitoring.yml up -d
-sleep 10
-docker compose -f app/docker-compose.yml up -d --build
-echo "Setup complete" > /home/azureadmin/setup.log
-SCRIPT
-chmod +x /home/azureadmin/start-services.sh
-
-cat > /etc/systemd/system/althea-start.service << 'SERVICE'
-[Unit]
-Description=Start Althea Services
-After=docker.service network-online.target
-Wants=docker.service
-
-[Service]
-Type=oneshot
-ExecStart=/home/azureadmin/start-services.sh
-RemainAfterExit=yes
-TimeoutStartSec=300
-User=root
-
-[Install]
-WantedBy=multi-user.target
-SERVICE
-
-systemctl daemon-reload
-systemctl enable althea-start.service
-echo "Cloud-init done" > /home/azureadmin/cloudinit.log
-EOF
-  )
-
+  custom_data = base64encode(file("${path.module}/cloud-init.sh"))
   network_interface_ids = [
     azurerm_network_interface.nic.id,
   ]
