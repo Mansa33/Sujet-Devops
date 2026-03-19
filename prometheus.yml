@@ -12,4 +12,4 @@ scrape_configs:
 
   - job_name: 'althea-app'
     static_configs:
-      - targets: ['althea-web:80']
+      - targets: ['althea-nginx-exporter:9113']
