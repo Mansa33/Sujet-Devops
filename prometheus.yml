@@ -7,12 +7,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # Metriques systeme de la VM
+  # Metriques systeme de la VM (CPU, RAM, disque, reseau)
   - job_name: 'node-exporter'
     static_configs:
       - targets: ['node-exporter:9100']
-
-  # Metriques du container web Nginx
-  - job_name: 'althea-app'
-    static_configs:
-      - targets: ['althea-web:80']
