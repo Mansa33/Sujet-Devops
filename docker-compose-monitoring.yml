@@ -47,11 +47,14 @@ services:
       - app_althea-net
 
   # Promtail — agent qui collecte les logs systeme et les envoie a Loki
+  # Promtail — agent qui collecte les logs systeme et Docker et les envoie a Loki
   promtail:
     image: grafana/promtail
     container_name: promtail
     volumes:
       - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./promtail-config.yml:/etc/promtail/config.yml
     command: -config.file=/etc/promtail/config.yml
     restart: always
