@@ -9,6 +9,7 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
+  # Logs systeme de la VM
   - job_name: system
     static_configs:
       - targets:
@@ -16,3 +17,21 @@ scrape_configs:
         labels:
           job: varlogs
           __path__: /var/log/*log
+
+  # Logs Docker des containers (incluant althea-web Nginx)
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          __path__: /var/lib/docker/containers/*/*-json.log
+    pipeline_stages:
+      - json:
+          expressions:
+            output: log
+            container: attrs.name
+      - labels:
+          container:
+      - output:
+          source: output
