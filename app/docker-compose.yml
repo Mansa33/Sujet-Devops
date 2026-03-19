@@ -35,3 +35,13 @@ networks:
 # Volume persistant pour les donnees PostgreSQL
 volumes:
   db-data:
+
+althea-nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: althea-nginx-exporter
+    command:
+      - -nginx.scrape-uri=http://althea-web:80/metrics
+    networks:
+      - althea-net
+    depends_on:
+      - althea-web
